@@ -3,6 +3,7 @@ export type ConnectionStatus =
   | "connecting"
   | "connected"
   | "disconnected"
+  | "reconnecting"
   | "error"
 
 export interface TickerEntry {

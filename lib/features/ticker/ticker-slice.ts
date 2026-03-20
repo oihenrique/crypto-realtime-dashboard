@@ -8,6 +8,8 @@ export interface TickerState {
   trackedSymbols: string[]
   connectionStatus: ConnectionStatus
   lastMessageAt: number | null
+  reconnectAttempt: number
+  nextReconnectAt: number | null
   error: string | null
 }
 
@@ -17,6 +19,8 @@ const initialState: TickerState = {
   trackedSymbols: ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"],
   connectionStatus: "idle",
   lastMessageAt: null,
+  reconnectAttempt: 0,
+  nextReconnectAt: null,
   error: null,
 }
 
@@ -29,14 +33,26 @@ const tickerSlice = createSlice({
     },
     socketConnecting(state) {
       state.connectionStatus = "connecting"
+      state.nextReconnectAt = null
       state.error = null
     },
     socketConnected(state) {
       state.connectionStatus = "connected"
+      state.reconnectAttempt = 0
+      state.nextReconnectAt = null
       state.error = null
     },
     socketDisconnected(state) {
       state.connectionStatus = "disconnected"
+      state.nextReconnectAt = null
+    },
+    socketReconnectScheduled(
+      state,
+      action: PayloadAction<{ attempt: number; reconnectAt: number }>
+    ) {
+      state.connectionStatus = "reconnecting"
+      state.reconnectAttempt = action.payload.attempt
+      state.nextReconnectAt = action.payload.reconnectAt
     },
     socketError(state, action: PayloadAction<string>) {
       state.connectionStatus = "error"
@@ -62,6 +78,7 @@ export const {
   socketConnecting,
   socketConnected,
   socketDisconnected,
+  socketReconnectScheduled,
   socketError,
   upsertTickers,
 } = tickerSlice.actions
