@@ -4,3 +4,7 @@ export interface CoinMeta {
   imageUrl: string | null
   description: string | null
 }
+
+export interface CoinMetadataResponse {
+  coins: CoinMeta[]
+}

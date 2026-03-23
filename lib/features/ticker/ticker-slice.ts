@@ -60,7 +60,23 @@ const tickerSlice = createSlice({
     },
     upsertTickers(state, action: PayloadAction<TickerEntry[]>) {
       for (const ticker of action.payload) {
-        state.bySymbol[ticker.symbol] = ticker
+        const previousTicker = state.bySymbol[ticker.symbol]
+        const previousPrice = previousTicker?.price ?? null
+        const priceDirection =
+          previousPrice === null
+            ? "flat"
+            : ticker.price > previousPrice
+              ? "up"
+              : ticker.price < previousPrice
+                ? "down"
+                : "flat"
+
+        state.bySymbol[ticker.symbol] = {
+          ...ticker,
+          previousPrice,
+          priceDirection,
+          priceFlashAt: priceDirection === "flat" ? null : Date.now(),
+        }
 
         if (!state.symbols.includes(ticker.symbol)) {
           state.symbols.push(ticker.symbol)

@@ -1,5 +1,7 @@
 import { createSelector } from "@reduxjs/toolkit"
 
+import { selectMetaBySymbol } from "@/lib/features/meta/meta.selectors"
+import type { TickerEntry } from "@/lib/features/ticker/ticker.types"
 import type { RootState } from "@/lib/store/store"
 
 export const selectTickerState = (state: RootState) => state.ticker
@@ -42,4 +44,35 @@ export const selectTopGainers = createSelector([selectTickerCards], (tickers) =>
 export const selectTopVolume = createSelector([selectTickerCards], (tickers) =>
   [...tickers].sort((left, right) => right.quoteVolume - left.quoteVolume)[0] ??
   null
+)
+
+export const selectFeaturedTickers = createSelector(
+  [selectTickerCards],
+  (tickers) => {
+    const featuredSymbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+    const featuredTickers: TickerEntry[] = []
+
+    for (const symbol of featuredSymbols) {
+      const ticker = tickers.find((entry) => entry.symbol === symbol)
+
+      if (ticker) {
+        featuredTickers.push(ticker)
+      }
+    }
+
+    return featuredTickers
+  }
+)
+
+export const selectTickerRows = createSelector(
+  [selectTickerCards, selectMetaBySymbol],
+  (tickers, metaBySymbol) =>
+    [...tickers]
+      .sort((left, right) => right.quoteVolume - left.quoteVolume)
+      .map((ticker) => ({
+        ...ticker,
+        displayName: metaBySymbol[ticker.symbol]?.name ?? ticker.symbol,
+        imageUrl: metaBySymbol[ticker.symbol]?.imageUrl ?? null,
+        description: metaBySymbol[ticker.symbol]?.description ?? null,
+      }))
 )

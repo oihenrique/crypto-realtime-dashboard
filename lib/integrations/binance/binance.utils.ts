@@ -28,6 +28,7 @@ export function normalizeBinanceTicker(
   return {
     symbol: payload.s,
     price: Number.parseFloat(payload.c),
+    previousPrice: null,
     priceChange: Number.parseFloat(payload.p),
     changePercent: Number.parseFloat(payload.P),
     high: Number.parseFloat(payload.h),
@@ -36,6 +37,8 @@ export function normalizeBinanceTicker(
     quoteVolume: Number.parseFloat(payload.q),
     eventTime: payload.E,
     updatedAt: Date.now(),
+    priceDirection: "flat",
+    priceFlashAt: null,
   }
 }
 

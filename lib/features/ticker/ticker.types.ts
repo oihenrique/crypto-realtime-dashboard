@@ -9,6 +9,7 @@ export type ConnectionStatus =
 export interface TickerEntry {
   symbol: string
   price: number
+  previousPrice: number | null
   priceChange: number
   changePercent: number
   high: number
@@ -17,4 +18,6 @@ export interface TickerEntry {
   quoteVolume: number
   eventTime: number
   updatedAt: number
+  priceDirection: "up" | "down" | "flat"
+  priceFlashAt: number | null
 }

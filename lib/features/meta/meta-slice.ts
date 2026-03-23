@@ -1,8 +1,12 @@
-import { createSlice, type PayloadAction } from "@reduxjs/toolkit"
+import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit"
 
-import type { CoinMeta } from "@/lib/features/meta/meta.types"
+import type {
+  CoinMeta,
+  CoinMetadataResponse,
+} from "@/lib/features/meta/meta.types"
+import type { RootState } from "@/lib/store/store"
 
-interface MetaState {
+export interface MetaState {
   bySymbol: Record<string, CoinMeta>
   status: "idle" | "loading" | "succeeded" | "failed"
   error: string | null
@@ -13,6 +17,37 @@ const initialState: MetaState = {
   status: "idle",
   error: null,
 }
+
+export const fetchCoinMetadata = createAsyncThunk<
+  CoinMeta[],
+  string[],
+  { state: RootState; rejectValue: string }
+>("meta/fetchCoinMetadata", async (symbols, thunkApi) => {
+  const uniqueSymbols = [...new Set(symbols.map((symbol) => symbol.toUpperCase()))]
+
+  if (uniqueSymbols.length === 0) {
+    return []
+  }
+
+  try {
+    const params = new URLSearchParams()
+    params.set("symbols", uniqueSymbols.join(","))
+
+    const response = await fetch(`/api/proxy/coingecko?${params.toString()}`)
+
+    if (!response.ok) {
+      throw new Error("Falha ao buscar metadados das moedas.")
+    }
+
+    const payload = (await response.json()) as CoinMetadataResponse
+
+    return payload.coins
+  } catch (error) {
+    return thunkApi.rejectWithValue(
+      error instanceof Error ? error.message : "Falha ao carregar metadados."
+    )
+  }
+})
 
 const metaSlice = createSlice({
   name: "meta",
@@ -33,6 +68,24 @@ const metaSlice = createSlice({
       state.status = "failed"
       state.error = action.payload
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchCoinMetadata.pending, (state) => {
+        state.status = "loading"
+        state.error = null
+      })
+      .addCase(fetchCoinMetadata.fulfilled, (state, action) => {
+        for (const coin of action.payload) {
+          state.bySymbol[coin.symbol] = coin
+        }
+
+        state.status = "succeeded"
+      })
+      .addCase(fetchCoinMetadata.rejected, (state, action) => {
+        state.status = "failed"
+        state.error = action.payload ?? "Falha ao carregar metadados."
+      })
   },
 })
 

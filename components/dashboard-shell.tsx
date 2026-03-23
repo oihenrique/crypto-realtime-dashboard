@@ -1,27 +1,75 @@
 "use client"
 
-import { useEffect } from "react"
+import { useDeferredValue, useEffect, useMemo, useState } from "react"
 
+import {
+  MarketDataTable,
+  type SortDirection,
+  type SortKey,
+} from "@/components/market-data-table"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
 import {
+  selectMetaError,
+  selectMetaStatus,
+} from "@/lib/features/meta/meta.selectors"
+import { fetchCoinMetadata } from "@/lib/features/meta/meta-slice"
+import {
   selectConnectionStatus,
+  selectFeaturedTickers,
   selectLastMessageAt,
   selectNextReconnectAt,
   selectReconnectAttempt,
-  selectTickerCards,
+  selectTickerRows,
   selectTopGainers,
   selectTopVolume,
   selectTrackedSymbols,
 } from "@/lib/features/ticker/ticker.selectors"
 import { disconnectSocket, connectSocket } from "@/lib/store/socket-actions"
 
-function formatPrice(value: number) {
+function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: value >= 1000 ? 2 : 4,
   }).format(value)
+}
+
+function formatCompactCurrency(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    notation: "compact",
+    maximumFractionDigits: 2,
+  }).format(value)
+}
+
+function ConnectionBadge({
+  status,
+}: {
+  status:
+    | "idle"
+    | "connecting"
+    | "connected"
+    | "disconnected"
+    | "reconnecting"
+    | "error"
+}) {
+  const badgeClass =
+    status === "connected"
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+      : status === "reconnecting" || status === "connecting"
+        ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
+        : "border-red-500/30 bg-red-500/10 text-red-300"
+
+  return (
+    <span
+      className={`rounded-full border px-3 py-1 text-sm capitalize ${badgeClass}`}
+    >
+      {status}
+    </span>
+  )
 }
 
 export function DashboardShell() {
@@ -31,48 +79,131 @@ export function DashboardShell() {
   const lastMessageAt = useAppSelector(selectLastMessageAt)
   const reconnectAttempt = useAppSelector(selectReconnectAttempt)
   const nextReconnectAt = useAppSelector(selectNextReconnectAt)
-  const tickerCards = useAppSelector(selectTickerCards)
   const topGainers = useAppSelector(selectTopGainers)
   const topVolume = useAppSelector(selectTopVolume)
+  const featuredTickers = useAppSelector(selectFeaturedTickers)
+  const tickerRows = useAppSelector(selectTickerRows)
+  const metaStatus = useAppSelector(selectMetaStatus)
+  const metaError = useAppSelector(selectMetaError)
+
+  const [search, setSearch] = useState("")
+  const [sortKey, setSortKey] = useState<SortKey>("volume")
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
+  const deferredSearch = useDeferredValue(search)
 
   useEffect(() => {
     dispatch(connectSocket({ symbols: trackedSymbols }))
+    dispatch(fetchCoinMetadata(trackedSymbols))
 
     return () => {
       dispatch(disconnectSocket())
     }
   }, [dispatch, trackedSymbols])
 
+  const filteredRows = useMemo(() => {
+    const query = deferredSearch.trim().toLowerCase()
+
+    if (!query) {
+      return tickerRows
+    }
+
+    return tickerRows.filter((ticker) => {
+      return (
+        ticker.symbol.toLowerCase().includes(query) ||
+        ticker.displayName.toLowerCase().includes(query)
+      )
+    })
+  }, [deferredSearch, tickerRows])
+
+  const sortedRows = useMemo(() => {
+    const sorted = [...filteredRows]
+
+    sorted.sort((left, right) => {
+      const directionFactor = sortDirection === "asc" ? 1 : -1
+
+      if (sortKey === "asset") {
+        return left.displayName.localeCompare(right.displayName) * directionFactor
+      }
+
+      if (sortKey === "price") {
+        return (left.price - right.price) * directionFactor
+      }
+
+      if (sortKey === "change") {
+        return (left.changePercent - right.changePercent) * directionFactor
+      }
+
+      return (left.quoteVolume - right.quoteVolume) * directionFactor
+    })
+
+    return sorted
+  }, [filteredRows, sortDirection, sortKey])
+
+  function handleSortChange(nextKey: SortKey) {
+    if (nextKey === sortKey) {
+      setSortDirection((current) => (current === "asc" ? "desc" : "asc"))
+      return
+    }
+
+    setSortKey(nextKey)
+    setSortDirection(nextKey === "asset" ? "asc" : "desc")
+  }
+
+  const isInitialLoading =
+    (connectionStatus === "connecting" || connectionStatus === "idle") &&
+    tickerRows.length === 0
+
   return (
-    <main className="min-h-svh bg-background px-6 py-10 text-foreground">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <header className="flex flex-col gap-4 rounded-3xl border border-border bg-card/80 p-6 shadow-sm">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm tracking-[0.3em] text-muted-foreground uppercase">
+    <main className="min-h-svh bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.16),_transparent_28%),linear-gradient(180deg,_rgba(6,11,25,1)_0%,_rgba(7,12,20,1)_42%,_rgba(3,6,14,1)_100%)] px-4 py-6 text-foreground sm:px-6 sm:py-10">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+        <header className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur md:p-8">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <p className="text-xs font-medium uppercase tracking-[0.35em] text-cyan-200/70">
                 Crypto Dashboard
               </p>
-              <h1 className="text-3xl font-semibold">
-                Motor de dados em tempo real
+              <h1 className="max-w-2xl text-4xl font-semibold tracking-tight sm:text-5xl">
+                Monitoramento em tempo real com Binance e Redux
               </h1>
+              <p className="max-w-xl text-sm leading-6 text-slate-300">
+                Preços, volume e variação em um único painel, com streaming ao
+                vivo, cache de metadados e tolerância a reconexão.
+              </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <span className="rounded-full border border-border px-3 py-1 text-sm text-muted-foreground capitalize">
-                status: {connectionStatus}
-              </span>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  dispatch(connectSocket({ symbols: trackedSymbols }))
-                }
-              >
-                Reconectar
-              </Button>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-4">
+                <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+                  Conexão
+                </p>
+                <div className="mt-3 flex items-center gap-3">
+                  <ConnectionBadge status={connectionStatus} />
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      dispatch(connectSocket({ symbols: trackedSymbols }))
+                    }
+                  >
+                    Reconectar
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-4">
+                <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+                  Busca
+                </p>
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Buscar por nome ou símbolo"
+                  className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/40"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="text-sm text-muted-foreground">
+          <div className="mt-6 grid gap-3 text-sm text-slate-300 md:grid-cols-3">
             <p>Streams monitorados: {trackedSymbols.join(", ")}</p>
             <p>
               Última atualização:{" "}
@@ -80,110 +211,158 @@ export function DashboardShell() {
                 ? new Date(lastMessageAt).toLocaleTimeString("pt-BR")
                 : "aguardando dados"}
             </p>
-            {nextReconnectAt ? (
-              <p>
-                Reconexão tentativa {reconnectAttempt}:{" "}
-                {new Date(nextReconnectAt).toLocaleTimeString("pt-BR")}
-              </p>
-            ) : null}
+            <p>
+              Metadados:{" "}
+              {metaStatus === "loading"
+                ? "carregando"
+                : metaStatus === "failed"
+                  ? "falha"
+                  : "prontos"}
+            </p>
           </div>
+
+          {nextReconnectAt ? (
+            <p className="mt-4 text-sm text-amber-200">
+              Reconexão tentativa {reconnectAttempt} às{" "}
+              {new Date(nextReconnectAt).toLocaleTimeString("pt-BR")}.
+            </p>
+          ) : null}
+
+          {metaError ? (
+            <p className="mt-2 text-sm text-red-300">{metaError}</p>
+          ) : null}
         </header>
 
-        <section className="grid gap-4 md:grid-cols-2">
-          <article className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-            <p className="text-sm tracking-[0.2em] text-muted-foreground uppercase">
-              Top Gainers
-            </p>
-            <div className="mt-4 space-y-3">
-              {topGainers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Aguardando volume mínimo de dados para ranquear.
-                </p>
-              ) : (
-                topGainers.map((ticker) => (
-                  <div
-                    key={ticker.symbol}
-                    className="flex items-center justify-between text-sm"
+        <section className="grid gap-4 xl:grid-cols-[1.7fr_1fr]">
+          <div className="grid gap-4 md:grid-cols-3">
+            {isInitialLoading
+              ? Array.from({ length: 3 }).map((_, index) => (
+                  <article
+                    key={index}
+                    className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.24)]"
                   >
-                    <span className="font-medium">{ticker.symbol}</span>
-                    <span className="text-emerald-400">
-                      {ticker.changePercent.toFixed(2)}%
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          </article>
-
-          <article className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-            <p className="text-sm tracking-[0.2em] text-muted-foreground uppercase">
-              Maior Volume
-            </p>
-            <div className="mt-4">
-              {topVolume ? (
-                <>
-                  <p className="text-2xl font-semibold">{topVolume.symbol}</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Volume cotado: {formatPrice(topVolume.quoteVolume)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Preço: {formatPrice(topVolume.price)}
-                  </p>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Aguardando os primeiros tickers para calcular o ranking.
-                </p>
-              )}
-            </div>
-          </article>
-        </section>
-
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {tickerCards.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-border p-6 text-sm text-muted-foreground md:col-span-2 xl:col-span-4">
-              A conexão foi iniciada. Os primeiros tickers da Binance aparecerão
-              aqui assim que chegarem.
-            </div>
-          ) : (
-            tickerCards.map((ticker) => {
-              return (
-                <article
-                  key={ticker.symbol}
-                  className="rounded-3xl border border-border bg-card p-5 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Ativo</p>
-                      <h2 className="text-xl font-semibold">{ticker.symbol}</h2>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-2">
+                        <Skeleton className="h-3 w-24" />
+                        <Skeleton className="h-8 w-20" />
+                      </div>
+                      <Skeleton className="h-8 w-16 rounded-full" />
                     </div>
-                    <span
-                      className={
-                        ticker.changePercent >= 0
-                          ? "rounded-full bg-emerald-500/12 px-2.5 py-1 text-sm text-emerald-400"
-                          : "rounded-full bg-red-500/12 px-2.5 py-1 text-sm text-red-400"
-                      }
-                    >
-                      {ticker.changePercent.toFixed(2)}%
-                    </span>
-                  </div>
+                    <Skeleton className="mt-6 h-10 w-32" />
+                    <div className="mt-6 grid grid-cols-2 gap-3">
+                      <Skeleton className="h-20 rounded-2xl" />
+                      <Skeleton className="h-20 rounded-2xl" />
+                    </div>
+                  </article>
+                ))
+              : featuredTickers.map((ticker) => (
+                  <article
+                    key={ticker.symbol}
+                    className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.24)]"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.25em] text-slate-400">
+                          Big Player
+                        </p>
+                        <h2 className="mt-2 text-2xl font-semibold">
+                          {ticker.symbol}
+                        </h2>
+                      </div>
+                      <span
+                        className={
+                          ticker.changePercent >= 0
+                            ? "rounded-full bg-emerald-500/12 px-2.5 py-1 text-sm text-emerald-300"
+                            : "rounded-full bg-red-500/12 px-2.5 py-1 text-sm text-red-300"
+                        }
+                      >
+                        {ticker.changePercent.toFixed(2)}%
+                      </span>
+                    </div>
 
-                  <div className="mt-5 space-y-2">
-                    <p className="text-2xl font-semibold">
-                      {formatPrice(ticker.price)}
+                    <p className="mt-6 text-3xl font-semibold">
+                      {formatCurrency(ticker.price)}
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      High 24h: {formatPrice(ticker.high)}
+
+                    <div className="mt-6 grid grid-cols-2 gap-3 text-sm text-slate-300">
+                      <div className="rounded-2xl bg-slate-950/40 p-3">
+                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                          Máxima 24h
+                        </p>
+                        <p className="mt-2">{formatCurrency(ticker.high)}</p>
+                      </div>
+                      <div className="rounded-2xl bg-slate-950/40 p-3">
+                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                          Volume
+                        </p>
+                        <p className="mt-2">
+                          {formatCompactCurrency(ticker.quoteVolume)}
+                        </p>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+          </div>
+
+          <div className="grid gap-4">
+            <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
+              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+                Top Gainers
+              </p>
+              <div className="mt-4 space-y-3">
+                {topGainers.length === 0 ? (
+                  <p className="text-sm text-slate-400">
+                    Aguardando volume mínimo de dados para ranquear.
+                  </p>
+                ) : (
+                  topGainers.map((ticker) => (
+                    <div
+                      key={ticker.symbol}
+                      className="flex items-center justify-between rounded-2xl bg-slate-950/40 px-4 py-3 text-sm"
+                    >
+                      <span className="font-medium">{ticker.symbol}</span>
+                      <span className="text-emerald-300">
+                        {ticker.changePercent.toFixed(2)}%
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </article>
+
+            <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
+              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+                Maior Volume
+              </p>
+              <div className="mt-4">
+                {topVolume ? (
+                  <>
+                    <p className="text-3xl font-semibold">{topVolume.symbol}</p>
+                    <p className="mt-3 text-sm text-slate-300">
+                      Volume cotado:{" "}
+                      {formatCompactCurrency(topVolume.quoteVolume)}
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      Low 24h: {formatPrice(ticker.low)}
+                    <p className="text-sm text-slate-300">
+                      Preço: {formatCurrency(topVolume.price)}
                     </p>
-                  </div>
-                </article>
-              )
-            })
-          )}
+                  </>
+                ) : (
+                  <p className="text-sm text-slate-400">
+                    Aguardando os primeiros tickers para calcular o ranking.
+                  </p>
+                )}
+              </div>
+            </article>
+          </div>
         </section>
+
+        <MarketDataTable
+          rows={sortedRows}
+          isLoading={isInitialLoading}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+          onSortChange={handleSortChange}
+        />
       </div>
     </main>
   )
