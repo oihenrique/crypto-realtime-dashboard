@@ -1,6 +1,9 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit"
 
-import type { ConnectionStatus, TickerEntry } from "@/lib/features/ticker/ticker.types"
+import type {
+  ConnectionStatus,
+  TickerEntry,
+} from "@/lib/features/ticker/ticker.types"
 
 export interface TickerState {
   bySymbol: Record<string, TickerEntry>
@@ -58,6 +61,12 @@ const tickerSlice = createSlice({
       state.connectionStatus = "error"
       state.error = action.payload
     },
+    resetTickerRuntimeState(state) {
+      return {
+        ...initialState,
+        trackedSymbols: state.trackedSymbols,
+      }
+    },
     upsertTickers(state, action: PayloadAction<TickerEntry[]>) {
       for (const ticker of action.payload) {
         const previousTicker = state.bySymbol[ticker.symbol]
@@ -96,6 +105,7 @@ export const {
   socketDisconnected,
   socketReconnectScheduled,
   socketError,
+  resetTickerRuntimeState,
   upsertTickers,
 } = tickerSlice.actions
 

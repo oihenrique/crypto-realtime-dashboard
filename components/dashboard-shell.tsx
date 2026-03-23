@@ -27,6 +27,7 @@ import {
   selectTrackedSymbols,
 } from "@/lib/features/ticker/ticker.selectors"
 import { disconnectSocket, connectSocket } from "@/lib/store/socket-actions"
+import { resetSocket } from "@/lib/store/socket-actions"
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-US", {
@@ -122,7 +123,9 @@ export function DashboardShell() {
       const directionFactor = sortDirection === "asc" ? 1 : -1
 
       if (sortKey === "asset") {
-        return left.displayName.localeCompare(right.displayName) * directionFactor
+        return (
+          left.displayName.localeCompare(right.displayName) * directionFactor
+        )
       }
 
       if (sortKey === "price") {
@@ -153,13 +156,18 @@ export function DashboardShell() {
     (connectionStatus === "connecting" || connectionStatus === "idle") &&
     tickerRows.length === 0
 
+  function handleControlledReset() {
+    dispatch(resetSocket())
+    dispatch(fetchCoinMetadata(trackedSymbols))
+  }
+
   return (
     <main className="min-h-svh bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.16),_transparent_28%),linear-gradient(180deg,_rgba(6,11,25,1)_0%,_rgba(7,12,20,1)_42%,_rgba(3,6,14,1)_100%)] px-4 py-6 text-foreground sm:px-6 sm:py-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <header className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur md:p-8">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl space-y-3">
-              <p className="text-xs font-medium uppercase tracking-[0.35em] text-cyan-200/70">
+              <p className="text-xs font-medium tracking-[0.35em] text-cyan-200/70 uppercase">
                 Crypto Dashboard
               </p>
               <h1 className="max-w-2xl text-4xl font-semibold tracking-tight sm:text-5xl">
@@ -173,7 +181,7 @@ export function DashboardShell() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-4">
-                <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+                <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">
                   Conexão
                 </p>
                 <div className="mt-3 flex items-center gap-3">
@@ -190,14 +198,14 @@ export function DashboardShell() {
               </div>
 
               <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-4">
-                <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+                <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">
                   Busca
                 </p>
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Buscar por nome ou símbolo"
-                  className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/40"
+                  className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white transition outline-none focus:border-cyan-300/40"
                 />
               </div>
             </div>
@@ -229,7 +237,12 @@ export function DashboardShell() {
           ) : null}
 
           {metaError ? (
-            <p className="mt-2 text-sm text-red-300">{metaError}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <p className="text-sm text-red-300">{metaError}</p>
+              <Button variant="outline" onClick={handleControlledReset}>
+                Resetar conexão
+              </Button>
+            </div>
           ) : null}
         </header>
 
@@ -262,7 +275,7 @@ export function DashboardShell() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.25em] text-slate-400">
+                        <p className="text-xs tracking-[0.25em] text-slate-400 uppercase">
                           Big Player
                         </p>
                         <h2 className="mt-2 text-2xl font-semibold">
@@ -286,13 +299,13 @@ export function DashboardShell() {
 
                     <div className="mt-6 grid grid-cols-2 gap-3 text-sm text-slate-300">
                       <div className="rounded-2xl bg-slate-950/40 p-3">
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                        <p className="text-xs tracking-[0.18em] text-slate-500 uppercase">
                           Máxima 24h
                         </p>
                         <p className="mt-2">{formatCurrency(ticker.high)}</p>
                       </div>
                       <div className="rounded-2xl bg-slate-950/40 p-3">
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                        <p className="text-xs tracking-[0.18em] text-slate-500 uppercase">
                           Volume
                         </p>
                         <p className="mt-2">
@@ -306,7 +319,7 @@ export function DashboardShell() {
 
           <div className="grid gap-4">
             <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+              <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">
                 Top Gainers
               </p>
               <div className="mt-4 space-y-3">
@@ -331,7 +344,7 @@ export function DashboardShell() {
             </article>
 
             <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+              <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">
                 Maior Volume
               </p>
               <div className="mt-4">

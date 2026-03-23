@@ -1,6 +1,7 @@
 import type { Middleware } from "@reduxjs/toolkit"
 
 import {
+  resetTickerRuntimeState,
   socketConnected,
   socketConnecting,
   socketDisconnected,
@@ -16,7 +17,11 @@ import {
   normalizeBinanceTicker,
   parseBinanceTickerMessage,
 } from "@/lib/integrations/binance/binance.utils"
-import { connectSocket, disconnectSocket } from "@/lib/store/socket-actions"
+import {
+  connectSocket,
+  disconnectSocket,
+  resetSocket,
+} from "@/lib/store/socket-actions"
 
 const FLUSH_INTERVAL_MS = 500
 const PRICE_CHANGE_THRESHOLD_PERCENT = 0.05
@@ -112,7 +117,9 @@ export const socketMiddleware: Middleware = (storeApi) => {
         return next(action)
       }
 
-      activeSymbols = action.payload.symbols.map((symbol) => symbol.toUpperCase())
+      activeSymbols = action.payload.symbols.map((symbol) =>
+        symbol.toUpperCase()
+      )
       clearReconnectTimer()
       cleanupSocket()
       storeApi.dispatch(socketConnecting())
@@ -165,6 +172,21 @@ export const socketMiddleware: Middleware = (storeApi) => {
       clearReconnectTimer()
       cleanupSocket()
       storeApi.dispatch(socketDisconnected())
+    }
+
+    if (resetSocket.match(action)) {
+      const state = storeApi.getState() as RootStateLike
+      const symbols = state.ticker.trackedSymbols
+
+      activeSymbols = []
+      reconnectAttempt = 0
+      clearReconnectTimer()
+      cleanupSocket()
+      storeApi.dispatch(resetTickerRuntimeState())
+
+      if (typeof window !== "undefined" && symbols.length > 0) {
+        storeApi.dispatch(connectSocket({ symbols }))
+      }
     }
 
     return next(action)
