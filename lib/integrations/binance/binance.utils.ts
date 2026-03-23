@@ -4,7 +4,7 @@ import {
   type BinanceTickerPayload,
 } from "@/lib/integrations/binance/binance.types"
 
-const BINANCE_BASE_URL = "wss://stream.binance.com:9443/stream?streams="
+const BINANCE_BASE_URL = "wss://stream.binance.com:443/stream?streams="
 
 export function buildBinanceStreamUrl(symbols: string[]) {
   const streams = symbols
