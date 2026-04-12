@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
 import { fetchCoinMetadata } from "@/lib/features/meta/meta-slice"
+import { selectMetaBySymbol } from "@/lib/features/meta/meta.selectors"
 import { selectTickerState } from "@/lib/features/ticker/ticker.selectors"
 import { connectSocket } from "@/lib/store/socket-actions"
 
@@ -87,6 +88,10 @@ export default function AssetPage() {
   const dispatch = useAppDispatch()
   const tickerState = useAppSelector(selectTickerState)
   const ticker = tickerState.bySymbol[symbol]
+  const metaBySymbol = useAppSelector(selectMetaBySymbol)
+  const displayName = ticker
+    ? metaBySymbol[symbol]?.name ?? ticker.symbol
+    : metaBySymbol[symbol]?.name ?? symbol
 
   const [range, setRange] = useState<RangeOption>("7d")
   const [candles, setCandles] = useState<CandlePoint[]>([])
@@ -176,7 +181,7 @@ export default function AssetPage() {
                     {symbol}
                   </p>
                   <h1 className="text-4xl font-semibold tracking-tight text-white">
-                    {ticker.displayName ?? ticker.symbol}
+                    {displayName}
                   </h1>
                   <p className="text-sm text-slate-300">
                     Última atualização:{" "}
