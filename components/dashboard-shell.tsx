@@ -311,7 +311,7 @@ export function DashboardShell() {
                 : displayFeatured.map((ticker) => (
                     <article
                       key={ticker.symbol}
-                      className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.24)]"
+                      className="flex min-h-full flex-col justify-between rounded-[1.75rem] border border-white/10 bg-white/5 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.24)]"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -338,7 +338,7 @@ export function DashboardShell() {
                       </p>
 
                       <div className="mt-6 grid grid-cols-2 gap-3 text-sm text-slate-300">
-                        <div className="rounded-2xl bg-slate-950/40 p-3">
+                        <div className="flex flex-col justify-between rounded-2xl bg-slate-950/40 p-3">
                           <p className="text-xs tracking-[0.18em] text-slate-500 uppercase">
                             Máxima 24h
                           </p>
@@ -346,11 +346,11 @@ export function DashboardShell() {
                             {formatCurrency(ticker.high, currency)}
                           </p>
                         </div>
-                        <div className="rounded-2xl bg-slate-950/40 p-3">
+                        <div className="flex flex-col justify-between rounded-2xl bg-slate-950/40 p-3">
                           <p className="text-xs tracking-[0.18em] text-slate-500 uppercase">
                             Volume
                           </p>
-                          <p className="mt-2">
+                          <p>
                             {formatCompactCurrency(
                               ticker.quoteVolume,
                               currency
@@ -469,69 +469,40 @@ export function DashboardShell() {
 
               <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
                 <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">
-                  Maior Volume
+                  Dominância por volume (rastreados)
                 </p>
-                <div className="mt-4">
-                  {displayTopVolume ? (
-                    <>
-                      <p className="text-3xl font-semibold">
-                        {displayTopVolume.symbol}
-                      </p>
-                      <p className="mt-3 text-sm text-slate-300">
-                        Volume cotado:{" "}
-                        {formatCompactCurrency(
-                          displayTopVolume.quoteVolume,
-                          currency
-                        )}
-                      </p>
-                      <p className="text-sm text-slate-300">
-                        Preço:{" "}
-                        {formatCurrency(displayTopVolume.price, currency)}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-slate-400">
-                      Aguardando os primeiros tickers para calcular o ranking.
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300">
+                  <div className="rounded-2xl bg-slate-950/40 p-3">
+                    <p className="text-xs tracking-[0.18em] text-slate-500 uppercase">
+                      BTC
                     </p>
-                  )}
+                    <p className="mt-2 text-2xl font-semibold text-white">
+                      {dominance.totalVolume === 0
+                        ? "—"
+                        : `${dominance.btcPercent.toFixed(1)}%`}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-slate-950/40 p-3">
+                    <p className="text-xs tracking-[0.18em] text-slate-500 uppercase">
+                      ETH
+                    </p>
+                    <p className="mt-2 text-2xl font-semibold text-white">
+                      {dominance.totalVolume === 0
+                        ? "—"
+                        : `${dominance.ethPercent.toFixed(1)}%`}
+                    </p>
+                  </div>
                 </div>
+                <p className="mt-3 text-xs text-slate-500">
+                  Calculado sobre o volume cotado dos ativos que estão
+                  visíveis/monitorados agora.
+                </p>
               </article>
+
             </div>
           </div>
 
           <div className="grid gap-4">
-            <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
-              <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">
-                Dominância por volume (rastreados)
-              </p>
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300">
-                <div className="rounded-2xl bg-slate-950/40 p-3">
-                  <p className="text-xs tracking-[0.18em] text-slate-500 uppercase">
-                    BTC
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold text-white">
-                    {dominance.totalVolume === 0
-                      ? "—"
-                      : `${dominance.btcPercent.toFixed(1)}%`}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-slate-950/40 p-3">
-                  <p className="text-xs tracking-[0.18em] text-slate-500 uppercase">
-                    ETH
-                  </p>
-                  <p className="text-2l mt-2 font-semibold text-white">
-                    {dominance.totalVolume === 0
-                      ? "—"
-                      : `${dominance.ethPercent.toFixed(1)}%`}
-                  </p>
-                </div>
-              </div>
-              <p className="mt-3 text-xs text-slate-500">
-                Calculado sobre o volume cotado dos ativos que estão
-                visíveis/monitorados agora.
-              </p>
-            </article>
-
             <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
               <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">
                 Top Gainers
