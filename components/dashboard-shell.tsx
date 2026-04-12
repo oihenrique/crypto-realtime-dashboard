@@ -21,6 +21,7 @@ import {
   selectLastMessageAt,
   selectNextReconnectAt,
   selectReconnectAttempt,
+  selectDominanceByVolume,
   selectTickerRows,
   selectTopGainers,
   selectTopVolume,
@@ -86,6 +87,7 @@ export function DashboardShell() {
   const tickerRows = useAppSelector(selectTickerRows)
   const metaStatus = useAppSelector(selectMetaStatus)
   const metaError = useAppSelector(selectMetaError)
+  const dominance = useAppSelector(selectDominanceByVolume)
 
   const [search, setSearch] = useState("")
   const [sortKey, setSortKey] = useState<SortKey>("volume")
@@ -281,6 +283,29 @@ export function DashboardShell() {
           </div>
 
           <div className="grid gap-4">
+            <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
+              <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">
+                Dominância por volume (rastreados)
+              </p>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300">
+                <div className="rounded-2xl bg-slate-950/40 p-3">
+                  <p className="text-xs tracking-[0.18em] text-slate-500 uppercase">BTC</p>
+                  <p className="mt-2 text-2xl font-semibold text-white">
+                    {dominance.totalVolume === 0 ? "—" : `${dominance.btcPercent.toFixed(1)}%`}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-slate-950/40 p-3">
+                  <p className="text-xs tracking-[0.18em] text-slate-500 uppercase">ETH</p>
+                  <p className="mt-2 text-2xl font-semibold text-white">
+                    {dominance.totalVolume === 0 ? "—" : `${dominance.ethPercent.toFixed(1)}%`}
+                  </p>
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-slate-500">
+                Calculado sobre o volume cotado dos ativos que estão visíveis/monitorados agora.
+              </p>
+            </article>
+
             <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
               <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">
                 Top Gainers

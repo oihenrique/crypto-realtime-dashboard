@@ -76,3 +76,17 @@ export const selectTickerRows = createSelector(
         description: metaBySymbol[ticker.symbol]?.description ?? null,
       }))
 )
+
+export const selectDominanceByVolume = createSelector([selectTickerCards], (tickers) => {
+  const totalVolume = tickers.reduce((sum, t) => sum + t.quoteVolume, 0)
+  const btc = tickers.find((t) => t.symbol === "BTCUSDT")?.quoteVolume ?? 0
+  const eth = tickers.find((t) => t.symbol === "ETHUSDT")?.quoteVolume ?? 0
+  if (totalVolume === 0) {
+    return { btcPercent: 0, ethPercent: 0, totalVolume: 0 }
+  }
+  return {
+    btcPercent: (btc / totalVolume) * 100,
+    ethPercent: (eth / totalVolume) * 100,
+    totalVolume,
+  }
+})
