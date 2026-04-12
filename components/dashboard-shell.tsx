@@ -1,6 +1,14 @@
 "use client"
 
 import { useDeferredValue, useEffect, useMemo, useState } from "react"
+import {
+  Area,
+  AreaChart,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  XAxis,
+  YAxis,
+} from "recharts"
 
 import {
   MarketDataTable,
@@ -29,6 +37,7 @@ import {
 } from "@/lib/features/ticker/ticker.selectors"
 import { disconnectSocket, connectSocket } from "@/lib/store/socket-actions"
 import { resetSocket } from "@/lib/store/socket-actions"
+import { useFearGreed } from "@/hooks/use-fear-greed"
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-US", {
@@ -88,6 +97,7 @@ export function DashboardShell() {
   const metaStatus = useAppSelector(selectMetaStatus)
   const metaError = useAppSelector(selectMetaError)
   const dominance = useAppSelector(selectDominanceByVolume)
+  const fearGreed = useFearGreed()
 
   const [search, setSearch] = useState("")
   const [sortKey, setSortKey] = useState<SortKey>("volume")
@@ -163,6 +173,12 @@ export function DashboardShell() {
     dispatch(fetchCoinMetadata(trackedSymbols))
   }
 
+  const fearGreedHistory =
+    fearGreed.history?.slice().reverse().map((point) => ({
+      time: point.updatedAt,
+      value: point.value,
+    })) ?? []
+
   return (
     <main className="min-h-svh bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.16),_transparent_28%),linear-gradient(180deg,_rgba(6,11,25,1)_0%,_rgba(7,12,20,1)_42%,_rgba(3,6,14,1)_100%)] px-4 py-6 text-foreground sm:px-6 sm:py-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
@@ -212,74 +228,176 @@ export function DashboardShell() {
         </header>
 
         <section className="grid gap-4 xl:grid-cols-[1.7fr_1fr]">
-          <div className="grid gap-4 md:grid-cols-3">
-            {isInitialLoading
-              ? Array.from({ length: 3 }).map((_, index) => (
-                  <article
-                    key={index}
-                    className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.24)]"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-2">
-                        <Skeleton className="h-3 w-24" />
-                        <Skeleton className="h-8 w-20" />
+          <div className="flex flex-col gap-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              {isInitialLoading
+                ? Array.from({ length: 3 }).map((_, index) => (
+                    <article
+                      key={index}
+                      className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.24)]"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-2">
+                          <Skeleton className="h-3 w-24" />
+                          <Skeleton className="h-8 w-20" />
+                        </div>
+                        <Skeleton className="h-8 w-16 rounded-full" />
                       </div>
-                      <Skeleton className="h-8 w-16 rounded-full" />
-                    </div>
-                    <Skeleton className="mt-6 h-10 w-32" />
-                    <div className="mt-6 grid grid-cols-2 gap-3">
-                      <Skeleton className="h-20 rounded-2xl" />
-                      <Skeleton className="h-20 rounded-2xl" />
-                    </div>
-                  </article>
-                ))
-              : featuredTickers.map((ticker) => (
-                  <article
-                    key={ticker.symbol}
-                    className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.24)]"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs tracking-[0.25em] text-slate-400 uppercase">
-                          Big Player
-                        </p>
-                        <h2 className="mt-2 text-2xl font-semibold">
-                          {ticker.symbol}
-                        </h2>
+                      <Skeleton className="mt-6 h-10 w-32" />
+                      <div className="mt-6 grid grid-cols-2 gap-3">
+                        <Skeleton className="h-20 rounded-2xl" />
+                        <Skeleton className="h-20 rounded-2xl" />
                       </div>
-                      <span
-                        className={
-                          ticker.changePercent >= 0
-                            ? "rounded-full bg-emerald-500/12 px-2.5 py-1 text-sm text-emerald-300"
-                            : "rounded-full bg-red-500/12 px-2.5 py-1 text-sm text-red-300"
-                        }
-                      >
-                        {ticker.changePercent.toFixed(2)}%
-                      </span>
-                    </div>
+                    </article>
+                  ))
+                : featuredTickers.map((ticker) => (
+                    <article
+                      key={ticker.symbol}
+                      className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.24)]"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs tracking-[0.25em] text-slate-400 uppercase">
+                            Big Player
+                          </p>
+                          <h2 className="mt-2 text-2xl font-semibold">
+                            {ticker.symbol}
+                          </h2>
+                        </div>
+                        <span
+                          className={
+                            ticker.changePercent >= 0
+                              ? "rounded-full bg-emerald-500/12 px-2.5 py-1 text-sm text-emerald-300"
+                              : "rounded-full bg-red-500/12 px-2.5 py-1 text-sm text-red-300"
+                          }
+                        >
+                          {ticker.changePercent.toFixed(2)}%
+                        </span>
+                      </div>
 
-                    <p className="mt-6 text-3xl font-semibold">
-                      {formatCurrency(ticker.price)}
+                      <p className="mt-6 text-3xl font-semibold">
+                        {formatCurrency(ticker.price)}
+                      </p>
+
+                      <div className="mt-6 grid grid-cols-2 gap-3 text-sm text-slate-300">
+                        <div className="rounded-2xl bg-slate-950/40 p-3">
+                          <p className="text-xs tracking-[0.18em] text-slate-500 uppercase">
+                            Máxima 24h
+                          </p>
+                          <p className="mt-2">{formatCurrency(ticker.high)}</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-950/40 p-3">
+                          <p className="text-xs tracking-[0.18em] text-slate-500 uppercase">
+                            Volume
+                          </p>
+                          <p className="mt-2">
+                            {formatCompactCurrency(ticker.quoteVolume)}
+                          </p>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
+                <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">
+                  Sentimento do mercado
+                </p>
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-sm text-slate-300">Fear & Greed Index</p>
+                    <p className="text-3xl font-semibold text-white">
+                      {fearGreed.loading
+                        ? "…"
+                        : fearGreed.value !== null
+                          ? fearGreed.value
+                          : "—"}
                     </p>
+                    <p className="text-sm text-slate-400">
+                      {fearGreed.loading
+                        ? "carregando"
+                        : fearGreed.error
+                          ? "indisponível"
+                          : fearGreed.label}
+                    </p>
+                  </div>
+                  <div className="rounded-full border border-white/10 bg-slate-950/40 px-4 py-2 text-xs text-slate-400">
+                    Atualizado:{" "}
+                    {fearGreed.updatedAt
+                      ? new Date(fearGreed.updatedAt).toLocaleDateString("pt-BR")
+                      : "—"}
+                  </div>
+                </div>
+                <div className="mt-4 h-28">
+                  {fearGreed.loading ? (
+                    <Skeleton className="h-full w-full" />
+                  ) : fearGreedHistory.length === 0 ? (
+                    <p className="text-xs text-slate-500">Sem histórico disponível.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={fearGreedHistory}>
+                        <XAxis dataKey="time" hide type="number" domain={["dataMin", "dataMax"]} />
+                        <YAxis hide domain={[0, 100]} />
+                        <RechartsTooltip
+                          content={({ active, payload }) => {
+                            if (!active || !payload || payload.length === 0) return null
+                            const p = payload[0].payload as { time: number; value: number }
+                            return (
+                              <div className="rounded-md border border-white/10 bg-slate-950/80 px-2 py-1 text-xs text-white">
+                                <p>{new Date(p.time).toLocaleDateString("pt-BR")}</p>
+                                <p>Índice: {p.value}</p>
+                              </div>
+                            )
+                          }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="value"
+                          stroke="#38bdf8"
+                          fill="url(#fgFill)"
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 3 }}
+                        />
+                        <defs>
+                          <linearGradient id="fgFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.35} />
+                            <stop offset="100%" stopColor="#38bdf8" stopOpacity={0.05} />
+                          </linearGradient>
+                        </defs>
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+                {fearGreed.error ? (
+                  <p className="mt-2 text-xs text-red-300">{fearGreed.error}</p>
+                ) : null}
+              </article>
 
-                    <div className="mt-6 grid grid-cols-2 gap-3 text-sm text-slate-300">
-                      <div className="rounded-2xl bg-slate-950/40 p-3">
-                        <p className="text-xs tracking-[0.18em] text-slate-500 uppercase">
-                          Máxima 24h
-                        </p>
-                        <p className="mt-2">{formatCurrency(ticker.high)}</p>
-                      </div>
-                      <div className="rounded-2xl bg-slate-950/40 p-3">
-                        <p className="text-xs tracking-[0.18em] text-slate-500 uppercase">
-                          Volume
-                        </p>
-                        <p className="mt-2">
-                          {formatCompactCurrency(ticker.quoteVolume)}
-                        </p>
-                      </div>
-                    </div>
-                  </article>
-                ))}
+              <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
+                <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">
+                  Maior Volume
+                </p>
+                <div className="mt-4">
+                  {topVolume ? (
+                    <>
+                      <p className="text-3xl font-semibold">{topVolume.symbol}</p>
+                      <p className="mt-3 text-sm text-slate-300">
+                        Volume cotado: {formatCompactCurrency(topVolume.quoteVolume)}
+                      </p>
+                      <p className="text-sm text-slate-300">
+                        Preço: {formatCurrency(topVolume.price)}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-slate-400">
+                      Aguardando os primeiros tickers para calcular o ranking.
+                    </p>
+                  )}
+                </div>
+              </article>
+            </div>
           </div>
 
           <div className="grid gap-4">
@@ -296,7 +414,7 @@ export function DashboardShell() {
                 </div>
                 <div className="rounded-2xl bg-slate-950/40 p-3">
                   <p className="text-xs tracking-[0.18em] text-slate-500 uppercase">ETH</p>
-                  <p className="mt-2 text-2xl font-semibold text-white">
+                  <p className="mt-2 text-2l font-semibold text-white">
                     {dominance.totalVolume === 0 ? "—" : `${dominance.ethPercent.toFixed(1)}%`}
                   </p>
                 </div>
@@ -327,30 +445,6 @@ export function DashboardShell() {
                       </span>
                     </div>
                   ))
-                )}
-              </div>
-            </article>
-
-            <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
-              <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">
-                Maior Volume
-              </p>
-              <div className="mt-4">
-                {topVolume ? (
-                  <>
-                    <p className="text-3xl font-semibold">{topVolume.symbol}</p>
-                    <p className="mt-3 text-sm text-slate-300">
-                      Volume cotado:{" "}
-                      {formatCompactCurrency(topVolume.quoteVolume)}
-                    </p>
-                    <p className="text-sm text-slate-300">
-                      Preço: {formatCurrency(topVolume.price)}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-sm text-slate-400">
-                    Aguardando os primeiros tickers para calcular o ranking.
-                  </p>
                 )}
               </div>
             </article>
