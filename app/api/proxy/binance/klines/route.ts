@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 const BINANCE_BASE_URLS = [
   "https://api.binance.com",
   "https://data.binance.com",
+  "https://api-gcp.binance.com",
 ]
 const MAX_LIMIT = 1000
 
@@ -21,7 +22,15 @@ function resolveParams(range: RangeOption) {
   if (range === "30d") return { interval: "1h", limit: 30 * 24, maxDays: 30 }
   if (range === "90d") return { interval: "4h", limit: 90 * 6, maxDays: 90 }
   if (range === "1y") return { interval: "1d", limit: 370, maxDays: 370 }
+  // max: diário, limitado a 3 anos
   return { interval: "1d", limit: MAX_LIMIT, maxDays: 365 * 3 }
+}
+
+const COINGECKO_IDS: Record<string, string> = {
+  BTCUSDT: "bitcoin",
+  ETHUSDT: "ethereum",
+  SOLUSDT: "solana",
+  BNBUSDT: "binancecoin",
 }
 
 async function fetchKlinesPage(
@@ -52,9 +61,53 @@ async function fetchKlinesPage(
       number,
       string,
       string,
-      string,
+      string
     ]
   >
+}
+
+async function fetchCoingeckoFallback(symbol: string, range: RangeOption) {
+  const id = COINGECKO_IDS[symbol]
+  if (!id) {
+    throw new Error("Sem fallback para este símbolo.")
+  }
+
+  const days =
+    range === "7d"
+      ? "7"
+      : range === "30d"
+        ? "30"
+        : range === "90d"
+          ? "90"
+          : range === "1y"
+            ? "365"
+            : "max"
+
+  const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=${days}&interval=hourly`
+
+  const res = await fetch(url, {
+    next: { revalidate: 600 },
+    headers: { "User-Agent": "crypto-realtime-dashboard/1.0" },
+  })
+
+  if (!res.ok) {
+    throw new Error(`Coingecko HTTP ${res.status}`)
+  }
+
+  const data = (await res.json()) as {
+    prices: [number, number][]
+    total_volumes: [number, number][]
+  }
+
+  const volumes = new Map<number, number>(data.total_volumes ?? [])
+
+  return data.prices.map(([time, price]) => ({
+    time,
+    close: price,
+    high: price,
+    low: price,
+    volume: volumes.get(time) ?? 0,
+  }))
 }
 
 export async function GET(request: Request) {
@@ -63,10 +116,7 @@ export async function GET(request: Request) {
   const range = (searchParams.get("range") as RangeOption) ?? "7d"
 
   if (!symbol) {
-    return NextResponse.json(
-      { message: "symbol é obrigatório" },
-      { status: 400 }
-    )
+    return NextResponse.json({ message: "symbol é obrigatório" }, { status: 400 })
   }
 
   const { interval, limit, maxDays } = resolveParams(range)
@@ -80,7 +130,6 @@ export async function GET(request: Request) {
     const candles: NormalizedCandle[] = []
     let attempts = 0
 
-    // Pagina enquanto precisar cobrir a janela de tempo e não exceder 5 páginas
     while (endTime > earliestAllowed && candles.length < MAX_LIMIT * 5) {
       const params = new URLSearchParams()
       params.set("symbol", symbol)
@@ -97,13 +146,15 @@ export async function GET(request: Request) {
           break
         } catch (error) {
           lastError =
-            error instanceof Error ? error : new Error("Falha ao buscar klines")
+            error instanceof Error
+              ? error
+              : new Error("Falha ao buscar klines")
           continue
         }
       }
 
       if (!klines) {
-        throw lastError ?? new Error("Falha ao buscar klines")
+        throw lastError ?? new Error("Falha ao buscar klines na Binance")
       }
 
       if (klines.length === 0) {
@@ -131,15 +182,22 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({ candles })
-  } catch (error) {
-    return NextResponse.json(
-      {
-        message:
-          error instanceof Error
-            ? error.message
-            : "Erro inesperado ao consultar Binance.",
-      },
-      { status: 502 }
-    )
+  } catch (binanceError) {
+    try {
+      const candles = await fetchCoingeckoFallback(symbol, range)
+      return NextResponse.json({ candles, source: "coingecko" })
+    } catch (error) {
+      return NextResponse.json(
+        {
+          message:
+            error instanceof Error
+              ? error.message
+              : binanceError instanceof Error
+                ? binanceError.message
+                : "Erro inesperado ao buscar klines.",
+        },
+        { status: 502 }
+      )
+    }
   }
 }
