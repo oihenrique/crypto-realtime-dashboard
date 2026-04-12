@@ -171,67 +171,30 @@ export function DashboardShell() {
                 Crypto Dashboard
               </p>
               <h1 className="max-w-2xl text-4xl font-semibold tracking-tight sm:text-5xl">
-                Monitoramento em tempo real com Binance e Redux
+                Acompanhe as principais criptos em tempo real
               </h1>
               <p className="max-w-xl text-sm leading-6 text-slate-300">
-                Preços, volume e variação em um único painel, com streaming ao
-                vivo, cache de metadados e tolerância a reconexão.
+                Preços, volume e variação num painel único, com alertas visuais
+                e reconexão automática.
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-4">
-                <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">
-                  Conexão
-                </p>
-                <div className="mt-3 flex items-center gap-3">
-                  <ConnectionBadge status={connectionStatus} />
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      dispatch(connectSocket({ symbols: trackedSymbols }))
-                    }
-                  >
-                    Reconectar
-                  </Button>
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-4">
-                <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">
-                  Busca
-                </p>
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Buscar por nome ou símbolo"
-                  className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white transition outline-none focus:border-cyan-300/40"
-                />
-              </div>
+            <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-4">
+              <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">
+                Busca
+              </p>
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar por nome ou símbolo"
+                className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white transition outline-none focus:border-cyan-300/40"
+              />
             </div>
-          </div>
-
-          <div className="mt-6 grid gap-3 text-sm text-slate-300 md:grid-cols-3">
-            <p>Streams monitorados: {trackedSymbols.join(", ")}</p>
-            <p>
-              Última atualização:{" "}
-              {lastMessageAt
-                ? new Date(lastMessageAt).toLocaleTimeString("pt-BR")
-                : "aguardando dados"}
-            </p>
-            <p>
-              Metadados:{" "}
-              {metaStatus === "loading"
-                ? "carregando"
-                : metaStatus === "failed"
-                  ? "falha"
-                  : "prontos"}
-            </p>
           </div>
 
           {nextReconnectAt ? (
             <p className="mt-4 text-sm text-amber-200">
-              Reconexão tentativa {reconnectAttempt} às{" "}
+              Tentando reconectar (tentativa {reconnectAttempt}) às{" "}
               {new Date(nextReconnectAt).toLocaleTimeString("pt-BR")}.
             </p>
           ) : null}

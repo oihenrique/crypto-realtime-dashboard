@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
 
 import { Skeleton } from "@/components/ui/skeleton"
@@ -191,9 +192,10 @@ export function MarketDataTable({
             </div>
           ) : (
             rows.map((ticker) => (
-              <article
+              <Link
+                href={`/asset/${ticker.symbol}`}
                 key={ticker.symbol}
-                className={`grid gap-4 px-5 py-4 transition-colors md:grid-cols-[1.6fr_1fr_1fr_1fr] ${flashClass(
+                className={`grid gap-4 px-5 py-4 transition-colors md:grid-cols-[1.6fr_1fr_1fr_1fr] hover:bg-white/5 ${flashClass(
                   ticker.priceDirection,
                   ticker.priceFlashAt
                 )}`}
@@ -218,7 +220,7 @@ export function MarketDataTable({
                       <span className="text-xs text-slate-500">{ticker.symbol}</span>
                     </div>
                     <p className="mt-1 line-clamp-2 text-sm text-slate-400">
-                      {ticker.description ?? "Metadados em carregamento."}
+                      {ticker.description ?? "Carregando detalhes da moeda..."}
                     </p>
                   </div>
                 </div>
@@ -243,7 +245,7 @@ export function MarketDataTable({
                   <p className="text-slate-500 md:hidden">Volume</p>
                   <p>{formatCompactCurrency(ticker.quoteVolume)}</p>
                 </div>
-              </article>
+              </Link>
             ))
           )}
         </div>
