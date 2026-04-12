@@ -50,11 +50,22 @@ function formatCompactCurrency(value: number) {
 }
 
 const formatTime = (time: number) =>
-  new Date(time).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+  new Date(time).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
 
 type TooltipPayload = { payload: CandlePoint }[]
 
-function ChartTooltip({ active, payload }: { active?: boolean; payload?: TooltipPayload }) {
+function ChartTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean
+  payload?: TooltipPayload
+}) {
   if (!active || !payload || payload.length === 0) return null
   const point = payload[0].payload as CandlePoint
   return (
@@ -87,7 +98,9 @@ export default function AssetPage() {
   useEffect(() => {
     if (!symbol) return
     if (!tickerState.trackedSymbols.includes(symbol)) {
-      dispatch(connectSocket({ symbols: [symbol, ...tickerState.trackedSymbols] }))
+      dispatch(
+        connectSocket({ symbols: [symbol, ...tickerState.trackedSymbols] })
+      )
       dispatch(fetchCoinMetadata([symbol]))
     }
   }, [dispatch, symbol, tickerState.trackedSymbols])
@@ -98,14 +111,18 @@ export default function AssetPage() {
       setLoadingCandles(true)
       setErrorCandles(null)
       try {
-        const res = await fetch(`/api/proxy/binance/klines?symbol=${symbol}&range=${range}`)
+        const res = await fetch(
+          `/api/proxy/binance/klines?symbol=${symbol}&range=${range}`
+        )
         if (!res.ok) {
           throw new Error("Não foi possível carregar o histórico.")
         }
         const data = (await res.json()) as { candles: CandlePoint[] }
         setCandles(data.candles)
       } catch (error) {
-        setErrorCandles(error instanceof Error ? error.message : "Falha ao carregar dados.")
+        setErrorCandles(
+          error instanceof Error ? error.message : "Falha ao carregar dados."
+        )
       } finally {
         setLoadingCandles(false)
       }
@@ -136,7 +153,7 @@ export default function AssetPage() {
             Voltar
           </Link>
           <span className="text-slate-500">/</span>
-          <span className="uppercase tracking-widest">{symbol || "Ativo"}</span>
+          <span className="tracking-widest uppercase">{symbol || "Ativo"}</span>
         </div>
 
         <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur md:p-8">
@@ -162,13 +179,22 @@ export default function AssetPage() {
                     {ticker.displayName ?? ticker.symbol}
                   </h1>
                   <p className="text-sm text-slate-300">
-                    Última atualização: {new Date(ticker.updatedAt).toLocaleTimeString("pt-BR")}
+                    Última atualização:{" "}
+                    {new Date(ticker.updatedAt).toLocaleTimeString("pt-BR")}
                   </p>
                 </div>
 
                 <div className="space-y-1 text-right">
-                  <p className="text-3xl font-semibold text-white">{formatCurrency(ticker.price)}</p>
-                  <p className={ticker.changePercent >= 0 ? "text-emerald-300" : "text-red-300"}>
+                  <p className="text-3xl font-semibold text-white">
+                    {formatCurrency(ticker.price)}
+                  </p>
+                  <p
+                    className={
+                      ticker.changePercent >= 0
+                        ? "text-emerald-300"
+                        : "text-red-300"
+                    }
+                  >
                     {ticker.changePercent.toFixed(2)}% (24h)
                   </p>
                 </div>
@@ -176,15 +202,25 @@ export default function AssetPage() {
 
               <div className="mt-8 grid gap-4 md:grid-cols-3">
                 <div className="rounded-2xl bg-slate-950/40 p-4">
-                  <p className="text-xs tracking-[0.2em] text-slate-500 uppercase">Máxima 24h</p>
-                  <p className="mt-2 text-lg font-semibold text-white">{formatCurrency(ticker.high)}</p>
+                  <p className="text-xs tracking-[0.2em] text-slate-500 uppercase">
+                    Máxima 24h
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-white">
+                    {formatCurrency(ticker.high)}
+                  </p>
                 </div>
                 <div className="rounded-2xl bg-slate-950/40 p-4">
-                  <p className="text-xs tracking-[0.2em] text-slate-500 uppercase">Mínima 24h</p>
-                  <p className="mt-2 text-lg font-semibold text-white">{formatCurrency(ticker.low)}</p>
+                  <p className="text-xs tracking-[0.2em] text-slate-500 uppercase">
+                    Mínima 24h
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-white">
+                    {formatCurrency(ticker.low)}
+                  </p>
                 </div>
                 <div className="rounded-2xl bg-slate-950/40 p-4">
-                  <p className="text-xs tracking-[0.2em] text-slate-500 uppercase">Volume</p>
+                  <p className="text-xs tracking-[0.2em] text-slate-500 uppercase">
+                    Volume
+                  </p>
                   <p className="mt-2 text-lg font-semibold text-white">
                     {formatCompactCurrency(ticker.quoteVolume)}
                   </p>
@@ -193,10 +229,14 @@ export default function AssetPage() {
 
               <div className="mt-8 flex flex-wrap gap-3 text-sm text-slate-300">
                 <span className="rounded-full border border-white/10 px-3 py-1">
-                  Preço anterior: {ticker.previousPrice ? formatCurrency(ticker.previousPrice) : "—"}
+                  Preço anterior:{" "}
+                  {ticker.previousPrice
+                    ? formatCurrency(ticker.previousPrice)
+                    : "—"}
                 </span>
                 <span className="rounded-full border border-white/10 px-3 py-1">
-                  Último tick: {new Date(ticker.eventTime).toLocaleTimeString("pt-BR")}
+                  Último tick:{" "}
+                  {new Date(ticker.eventTime).toLocaleTimeString("pt-BR")}
                 </span>
               </div>
             </>
@@ -206,8 +246,12 @@ export default function AssetPage() {
         <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">Histórico</p>
-              <p className="text-sm text-slate-300">Preço de fechamento agregado por hora</p>
+              <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">
+                Histórico
+              </p>
+              <p className="text-sm text-slate-300">
+                Preço de fechamento agregado por hora
+              </p>
             </div>
             <div className="flex gap-2 text-sm">
               {(["7d", "30d"] as RangeOption[]).map((option) => (
@@ -240,17 +284,31 @@ export default function AssetPage() {
                 >
                   <defs>
                     <linearGradient id="priceFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#38bdf8" stopOpacity={0.05} />
+                      <stop
+                        offset="0%"
+                        stopColor="#38bdf8"
+                        stopOpacity={0.35}
+                      />
+                      <stop
+                        offset="100%"
+                        stopColor="#38bdf8"
+                        stopOpacity={0.05}
+                      />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  <CartesianGrid
+                    stroke="rgba(255,255,255,0.04)"
+                    vertical={false}
+                  />
                   <XAxis
                     dataKey="time"
                     type="number"
                     domain={["dataMin", "dataMax"]}
                     tickFormatter={(value) =>
-                      new Date(value).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+                      new Date(value).toLocaleTimeString("pt-BR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
                     }
                     tickLine={false}
                     axisLine={false}

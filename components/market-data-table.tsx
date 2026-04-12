@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export type SortKey = "asset" | "price" | "change" | "volume"
 export type SortDirection = "asc" | "desc"
+export type DisplayCurrency = "USD" | "BRL"
 
 interface MarketRow {
   symbol: string
@@ -26,20 +27,21 @@ interface MarketDataTableProps {
   sortKey: SortKey
   sortDirection: SortDirection
   onSortChange: (key: SortKey) => void
+  currency: DisplayCurrency
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", {
+function formatCurrency(value: number, currency: DisplayCurrency) {
+  return new Intl.NumberFormat(currency === "BRL" ? "pt-BR" : "en-US", {
     style: "currency",
-    currency: "USD",
+    currency: currency === "BRL" ? "BRL" : "USD",
     maximumFractionDigits: value >= 1000 ? 2 : 4,
   }).format(value)
 }
 
-function formatCompactCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", {
+function formatCompactCurrency(value: number, currency: DisplayCurrency) {
+  return new Intl.NumberFormat(currency === "BRL" ? "pt-BR" : "en-US", {
     style: "currency",
-    currency: "USD",
+    currency: currency === "BRL" ? "BRL" : "USD",
     notation: "compact",
     maximumFractionDigits: 2,
   }).format(value)
@@ -136,12 +138,13 @@ export function MarketDataTable({
   sortKey,
   sortDirection,
   onSortChange,
+  currency,
 }: MarketDataTableProps) {
   return (
     <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/5">
       <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+          <p className="text-xs tracking-[0.24em] text-slate-400 uppercase">
             Lista em Tempo Real
           </p>
           <p className="mt-1 text-sm text-slate-400">
@@ -151,7 +154,7 @@ export function MarketDataTable({
         <p className="text-sm text-slate-400">{rows.length} ativos visíveis</p>
       </div>
 
-      <div className="hidden min-w-full grid-cols-[1.6fr_1fr_1fr_1fr] gap-4 px-5 py-3 text-xs uppercase tracking-[0.24em] text-slate-500 md:grid">
+      <div className="hidden min-w-full grid-cols-[1.6fr_1fr_1fr_1fr] gap-4 px-5 py-3 text-xs tracking-[0.24em] text-slate-500 uppercase md:grid">
         <HeaderButton
           label="Ativo"
           sortKey="asset"
@@ -195,7 +198,7 @@ export function MarketDataTable({
               <Link
                 href={`/asset/${ticker.symbol}`}
                 key={ticker.symbol}
-                className={`grid gap-4 px-5 py-4 transition-colors md:grid-cols-[1.6fr_1fr_1fr_1fr] hover:bg-white/5 ${flashClass(
+                className={`grid gap-4 px-5 py-4 transition-colors hover:bg-white/5 md:grid-cols-[1.6fr_1fr_1fr_1fr] ${flashClass(
                   ticker.priceDirection,
                   ticker.priceFlashAt
                 )}`}
@@ -216,8 +219,12 @@ export function MarketDataTable({
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="font-medium text-white">{ticker.displayName}</p>
-                      <span className="text-xs text-slate-500">{ticker.symbol}</span>
+                      <p className="font-medium text-white">
+                        {ticker.displayName}
+                      </p>
+                      <span className="text-xs text-slate-500">
+                        {ticker.symbol}
+                      </span>
                     </div>
                     <p className="mt-1 line-clamp-2 text-sm text-slate-400">
                       {ticker.description ?? "Carregando detalhes da moeda..."}
@@ -227,14 +234,18 @@ export function MarketDataTable({
 
                 <div className="text-sm">
                   <p className="text-slate-500 md:hidden">Preço</p>
-                  <p className="font-medium">{formatCurrency(ticker.price)}</p>
+                  <p className="font-medium">
+                    {formatCurrency(ticker.price, currency)}
+                  </p>
                 </div>
 
                 <div className="text-sm">
                   <p className="text-slate-500 md:hidden">Variação 24h</p>
                   <p
                     className={
-                      ticker.changePercent >= 0 ? "text-emerald-300" : "text-red-300"
+                      ticker.changePercent >= 0
+                        ? "text-emerald-300"
+                        : "text-red-300"
                     }
                   >
                     {ticker.changePercent.toFixed(2)}%
@@ -243,7 +254,7 @@ export function MarketDataTable({
 
                 <div className="text-sm">
                   <p className="text-slate-500 md:hidden">Volume</p>
-                  <p>{formatCompactCurrency(ticker.quoteVolume)}</p>
+                  <p>{formatCompactCurrency(ticker.quoteVolume, currency)}</p>
                 </div>
               </Link>
             ))
